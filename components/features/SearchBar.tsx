@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useTransition, useState, useEffect } from 'react';
+import { useCallback, useTransition, useState, useEffect, useRef } from 'react';
 import { Movie } from '@/services/movieService';
 import { getImageUrl } from '@/lib/utils';
 import Image from 'next/image';
@@ -14,6 +14,7 @@ export function SearchBar() {
   const [suggestions, setSuggestions] = useState<Movie[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [inputValue, setInputValue] = useState(searchParams.get('query') ?? '');
+  const searchBarRef = useRef<HTMLDivElement>(null);
 
   const createQueryString = useCallback(
     (name: string, value: string) => {
@@ -38,6 +39,8 @@ export function SearchBar() {
     startTransition(() => {
       router.push(`/?${createQueryString('query', query)}`);
       setShowSuggestions(false);
+      setSuggestions([]);
+      setInputValue('');
     });
   };
 
@@ -63,6 +66,19 @@ export function SearchBar() {
     return () => clearTimeout(debounceTimer);
   }, [inputValue]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchBarRef.current && !searchBarRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const formatYear = (dateString: string | null) => {
     if (!dateString) return '';
     try {
@@ -73,7 +89,7 @@ export function SearchBar() {
   };
 
   return (
-    <div className="relative w-full max-w-xl mx-auto">
+    <div className="relative w-full max-w-xl mx-auto" ref={searchBarRef}>
       <form onSubmit={handleSearch} className="w-full">
         <div className="join w-full">
           <input
